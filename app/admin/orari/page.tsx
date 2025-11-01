@@ -1,18 +1,18 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
-import { it } from 'date-fns/locale/it'
-import { registerLocale } from 'react-datepicker'
-registerLocale('it', it)
+
+import { Calendar } from "@/components/ui/calendar"
+import { it } from "date-fns/locale"
 
 import {
-  Alert,
-  AlertTitle,
-} from "@/components/ui/alert";
-import { CheckCircle2Icon } from "lucide-react"
-
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 
 
 type Barbiere = { id: string; nome: string; cognome: string }
@@ -36,7 +36,10 @@ export default function GestioneOrari() {
   const [orario, setOrario] = useState<string | null>(null)
   const [motivo, setMotivo] = useState('')
   const [blocchi, setBlocchi] = useState<Blocco[]>([])
-  const [bloccoConfermato, setBloccoConfermato] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogMessage, setDialogMessage] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [bloccoDaEliminare, setBloccoDaEliminare] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/barbieri').then(res => res.json()).then(setBarbieri)
@@ -49,51 +52,66 @@ export default function GestioneOrari() {
     setBlocchi(result)
   }
 
-  async function bloccaOrario() {
-    if (!data) return alert('Seleziona una data')
-
-    const res = await fetch('/admin/orari/api/blocca', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        barbiere_id: barbiereId,
-        data: data.toISOString().split('T')[0],
-        orario,
-        motivo,
-      }),
-    })
-
-    const result = await res.json()
-    if (!res.ok) {
-      alert(result.error || 'Errore nel blocco')
-      return
-    }
-
-    setBloccoConfermato(true) // mostra alert
-    setTimeout(() => setBloccoConfermato(false), 4000)
-    setMotivo('')
-    setOrario(null)
-    caricaBlocchi()
+async function bloccaOrario() {
+  if (!data) {
+    setDialogMessage('Seleziona una data')
+    setDialogOpen(true)
+    return
   }
 
-  async function eliminaBlocco(id: string) {
-    const conferma = confirm('Eliminare questo blocco?')
-    if (!conferma) return
+  const res = await fetch('/admin/orari/api/blocca', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      barbiere_id: barbiereId,
+      data: data.toLocaleDateString('it-IT').split('/').reverse().join('-'),
+      orario,
+      motivo,
+    }),
+  })
 
-    const res = await fetch('/admin/orari/api/elimina', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    })
-
-    const result = await res.json()
-    if (!res.ok) {
-      alert(result.error || 'Errore nella cancellazione')
-      return
-    }
-
-    caricaBlocchi()
+  const result = await res.json()
+  if (!res.ok) {
+    setDialogMessage(result.error || 'Errore nel blocco')
+    setDialogOpen(true)
+    return
   }
+
+  setDialogMessage('Blocco salvato con successo!')
+  setDialogOpen(true)
+  setMotivo('')
+  setOrario(null)
+  caricaBlocchi()
+}
+
+
+function chiediConfermaEliminazione(id: string) {
+  setBloccoDaEliminare(id)
+  setConfirmOpen(true)
+}
+
+async function confermaEliminazione() {
+  if (!bloccoDaEliminare) return
+
+  const res = await fetch('/admin/orari/api/elimina', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: bloccoDaEliminare }),
+  })
+
+  const result = await res.json()
+  setConfirmOpen(false)
+  setBloccoDaEliminare(null)
+
+  if (!res.ok) {
+    setDialogMessage(result.error || 'Errore nella cancellazione')
+    setDialogOpen(true)
+    return
+  }
+
+  caricaBlocchi()
+}
+
 
   return (
     <>
@@ -109,17 +127,6 @@ export default function GestioneOrari() {
       <h2 className="text-4xl md:text-5xl font-bold mb-14 text-center">
         Gestione Orari
       </h2>
-
-      {bloccoConfermato && (
-        <div className="grid w-full max-w-xl items-start gap-4 mx-auto m-6">
-          <Alert className='bg-green-600 border border-green-600 text-black'>
-            <CheckCircle2Icon className="h-10 w-10" />
-            <AlertTitle className="text-md">
-              Blocco salvato!
-            </AlertTitle>
-          </Alert>
-        </div>
-      )}
 
       {/* Form blocco */}
       <div className="border p-4 rounded shadow mb-8">
@@ -155,17 +162,27 @@ export default function GestioneOrari() {
         <label className="block mb-2 mt-4 text-lg">
           Data
         </label>
-        <DatePicker
-          selected={data}
-          onChange={setData}
-          dateFormat="dd/MM/yyyy"
-          locale="it"
-          className="text-xl"
-          inline
-          minDate={new Date()}
-          filterDate={(date) => {
+
+        <Calendar
+          mode="single"
+          selected={data ?? undefined}
+          onSelect={(selected) => setData(selected ?? null)}
+          required={false}
+          locale={it}
+          disabled={(date) => {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            const normalized = new Date(date)
+            normalized.setHours(0, 0, 0, 0)
+            const isPast = normalized < today
             const day = date.getDay()
-            return day !== 0 && day !== 1 // 0 = domenica, 1 = lunedì
+            const isWeekend = day === 0 || day === 1
+            return isPast || isWeekend
+          }}
+          className='rounded-md border'
+          classNames={{
+            day: "rounded-full w-10 h-10 flex items-center justify-center text-sm",
+            caption_label: "text-xl"
           }}
         />
 
@@ -211,7 +228,7 @@ export default function GestioneOrari() {
       </h3>
       <ul className="space-y-3 mb-20">
         {blocchi.length === 0 && (
-          <p className="text-gray-500">
+          <p className="text-gray-500 text-center text-2xl mt-10">
             Nessun blocco registrato
           </p>
         )}
@@ -232,7 +249,13 @@ export default function GestioneOrari() {
                   Orario:
                 </p>
                 <p>
-                  {b.orario || 'Tutto il giorno'}
+                  {b.orario
+                    ? new Date(`1970-01-01T${b.orario}`).toLocaleTimeString('it-IT', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false,
+                      })
+                    : 'Tutto il giorno'}
                 </p>
               </div>
 
@@ -258,7 +281,7 @@ export default function GestioneOrari() {
               }
             </div>
             <button
-              onClick={() => eliminaBlocco(b.id)}
+              onClick={() => chiediConfermaEliminazione(b.id)}
               className="bg-teal-900 hover:bg-teal-800 cursor-pointer text-lg px-4 py-2 rounded"
             >
               Elimina
@@ -266,6 +289,51 @@ export default function GestioneOrari() {
           </li>
         ))}
       </ul>
+
+      {/* Dialog messaggi */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Messaggio</DialogTitle>
+          </DialogHeader>
+          <p className="text-lg">{dialogMessage}</p>
+          <DialogFooter>
+            <Button 
+              onClick={() => setDialogOpen(false)}
+              className='hover:bg-blue-600 cursor-pointer'
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog conferma eliminazione */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Conferma eliminazione</DialogTitle>
+          </DialogHeader>
+          <p className="text-lg">Vuoi davvero eliminare questo blocco?</p>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmOpen(false)
+                setBloccoDaEliminare(null)
+              }}
+            >
+              Annulla
+            </Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={confermaEliminazione}
+            >
+              Elimina
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
     </>
   )

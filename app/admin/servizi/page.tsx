@@ -34,8 +34,10 @@ export default function GestioneServizi() {
   useEffect(() => {
     fetch('/admin/servizi/lista')
       .then(res => res.json())
-      .then(setServizi)
-    setLoading(false)
+      .then(data => {
+        setServizi(data)
+        setLoading(false)
+      })
   }, [])
 
   // AGGIUNGERE SERVIZIO

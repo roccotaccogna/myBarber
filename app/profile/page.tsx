@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server'
+import { createClient } from '@/utils/supabase/server';
 import { User, Smartphone } from 'lucide-react';
 
 export default async function ProfilePage() {
@@ -29,7 +29,7 @@ export default async function ProfilePage() {
   return (
     <div className='min-h-screen justify-center flex flex-col items-center text-white'>
       <div className='mb-20'>
-        <h1 className='text-5xl'>
+        <h1 className='text-4xl md:text-5xl'>
           Il mio Profilo
         </h1>
       </div>
@@ -67,7 +67,7 @@ export default async function ProfilePage() {
         </label>
         <div className="flex items-center space-x-6 bg-gray-700 px-4 py-3 rounded-lg">
           <Smartphone className="h-5 w-5 text-blue-500" />
-          <span className='text-white'>
+          <span className='text-white no-underline'>
             {profile.telefono}
           </span>
         </div>

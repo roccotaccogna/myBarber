@@ -1,12 +1,19 @@
 'use client'
 import { useState, useEffect } from 'react'
-import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
 import Link from 'next/link'
-import { registerLocale } from 'react-datepicker'
-import { it } from 'date-fns/locale/it'
 
-registerLocale('it', it)
+import { Calendar } from "@/components/ui/calendar"
+import { it } from "date-fns/locale"
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+
 
 type Persona = { id: string; nome: string; cognome: string }
 type Servizio = { id: string; nome: string }
@@ -39,6 +46,8 @@ export default function AggiungiPrenotazione() {
   const [data, setData] = useState<Date | null>(new Date())
   const [orario, setOrario] = useState('')
   const [dateBloccate, setDateBloccate] = useState<Date[]>([])
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogMessage, setDialogMessage] = useState('')
 
   useEffect(() => {
     if (clienteQuery.length > 1) {
@@ -88,7 +97,8 @@ export default function AggiungiPrenotazione() {
 
   async function creaPrenotazione() {
     if (!clienteId || !barberId || !serviceId || !data || !orario) {
-      alert('Compila tutti i campi')
+      setDialogMessage('Compila tutti i campi')
+      setDialogOpen(true)
       return
     }
 
@@ -108,11 +118,14 @@ export default function AggiungiPrenotazione() {
 
     if (!res.ok) {
     console.error('Errore API:', result)
-    alert(`Errore: ${result.error || JSON.stringify(result)}`)
+    setDialogMessage(`Errore: ${result.error || JSON.stringify(result)}`)
+    setDialogOpen(true)
     return
     }
 
-    alert('Prenotazione creata!')
+    setDialogMessage('Prenotazione creata!')
+    setDialogOpen(true)
+
     setClienteId('')
     setBarberId('')
     setServiceId('')
@@ -202,23 +215,28 @@ export default function AggiungiPrenotazione() {
         <label className="block mb-1 text-xl">
           Seleziona data
         </label>
-        <DatePicker
-          selected={data}
-          onChange={setData}
-          dateFormat="dd/MM/yyyy"
-          inline
-          minDate={new Date()}
-          filterDate={(date) => {
+
+        <Calendar
+          mode="single"
+          selected={data ?? undefined}
+          onSelect={(selected) => setData(selected ?? null)}
+          required={false}
+          locale={it}
+          disabled={(date) => {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
             const normalized = new Date(date)
             normalized.setHours(0, 0, 0, 0)
-
-            const isBloccata = dateBloccate.some(d => d.getTime() === normalized.getTime())
+            const isPast = normalized < today
             const day = date.getDay()
             const isWeekend = day === 0 || day === 1
-
-            return !isWeekend && !isBloccata
+            return isPast || isWeekend
           }}
-          locale="it"
+          className='rounded-md border'
+          classNames={{
+            day: "rounded-full w-10 h-10 flex items-center justify-center text-sm",
+            caption_label: "text-xl"
+          }}
         />
       </div>
 
@@ -250,6 +268,27 @@ export default function AggiungiPrenotazione() {
       <button onClick={creaPrenotazione} className="bg-green-600 text-white px-5 py-3 text-xl cursor-pointer rounded hover:bg-green-700 w-full">
         Crea prenotazione
       </button>
+
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="text-white">
+          <DialogHeader>
+            <DialogTitle className='text-xl'>
+              Messaggio
+            </DialogTitle>
+          </DialogHeader>
+            <p className="text-lg">
+              {dialogMessage}
+            </p>
+          <DialogFooter>
+            <Button 
+              onClick={() => setDialogOpen(false)}
+              className='hover:bg-blue-700 cursor-pointer'
+            >
+              OK
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
     </>
   )

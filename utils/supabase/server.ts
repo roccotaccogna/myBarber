@@ -25,4 +25,12 @@ export async function createClient() {
       },
     },
   );
+
+  // return createServerClient(supabaseUrl!, supabaseKey!, {
+  //   cookies: {
+  //     getAll() {
+  //       return cookieStore.getAll()
+  //     },
+  //   },
+  // })
 };

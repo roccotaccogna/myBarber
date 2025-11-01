@@ -1,12 +1,16 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
-import { it } from 'date-fns/locale/it'
-import { registerLocale } from 'react-datepicker'
-registerLocale('it', it)
 import LoadGest from '../_components/LoadGest'
+
+import { Calendar } from "@/components/ui/calendar"
+import { it } from "date-fns/locale"
+
+// import DatePicker from 'react-datepicker'
+// import 'react-datepicker/dist/react-datepicker.css'
+// import { it } from 'date-fns/locale/it'
+// import { registerLocale } from 'react-datepicker'
+// registerLocale('it', it)
 
 import {
   Dialog,
@@ -43,7 +47,7 @@ export default function BarberDashboard() {
   useEffect(() => {
     async function caricaPrenotazioni() {
       setLoading(true)
-      const dataISO = data.toISOString().split('T')[0]
+      const dataISO = data.toLocaleDateString('it-IT').split('/').reverse().join('-')
 
       const res = await fetch('/barber/prenotazioni', {
         method: 'POST',
@@ -109,7 +113,7 @@ export default function BarberDashboard() {
   }
 
   return (
-    <div className="p-6 text-white max-w-4xl mx-auto min-h-screen mt-20">
+    <div className="p-6 text-white max-w-4xl mx-auto min-h-screen mt-20 mb-24">
       <h1 className="text-4xl md:text-5xl font-bold mb-14 text-center mt-10">
         Gestione Prenotazioni
       </h1>
@@ -147,7 +151,7 @@ export default function BarberDashboard() {
         <label className="block mb-2 text-xl">
           Seleziona una data:
         </label>
-        <DatePicker
+        {/* <DatePicker
           selected={data}
           onChange={(date: Date | null) => {
             if (date instanceof Date) {
@@ -162,7 +166,31 @@ export default function BarberDashboard() {
             return day !== 0 && day !== 1
           }}
           locale="it"
-        />
+        /> */}
+          <Calendar
+            mode="single"
+            selected={data ?? undefined}
+            onSelect={(selected) => {
+              if (selected) setData(selected)
+            }}
+            required={false}
+            locale={it}
+            disabled={(date) => {
+              const today = new Date()
+              today.setHours(0, 0, 0, 0)
+              const normalized = new Date(date)
+              normalized.setHours(0, 0, 0, 0)
+              const isPast = normalized < today
+              const day = date.getDay()
+              const isWeekend = day === 0 || day === 1
+              return isPast || isWeekend
+            }}
+            className='rounded-md border'
+            classNames={{
+              day: "rounded-full w-10 h-10 flex items-center justify-center text-sm",
+              caption_label: "text-xl"
+            }}
+          />
       </div>
 
       {loading ? (
@@ -182,7 +210,11 @@ export default function BarberDashboard() {
                     Orario:
                   </p>
                   <p className='text-white'>
-                    {p.orario}
+                    {new Date(`1970-01-01T${p.orario}`).toLocaleTimeString('it-IT', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: false,
+                    })}
                   </p>
                 </div>
                 

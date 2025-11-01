@@ -1,12 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
-import { it } from 'date-fns/locale/it'
-import { registerLocale } from 'react-datepicker'
-registerLocale('it', it)
 import LoadGest from '../_components/LoadGest'
+
+import { Calendar } from "@/components/ui/calendar"
+import { it } from "date-fns/locale"
 
 import {
   Alert,
@@ -47,7 +45,7 @@ export default function ClienteDashboard() {
 
   useEffect(() => {
     async function caricaOrari() {
-      const dataISO = data.toISOString().split('T')[0]
+      const dataISO = data.toLocaleDateString('it-IT').split('/').reverse().join('-')
       const orariPerBarbiere: OrariDisponibili = {}
 
       for (const barbiere of barbieri) {
@@ -99,7 +97,7 @@ export default function ClienteDashboard() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto min-h-screen mt-20 text-white">
+    <div className="p-6 max-w-4xl mx-auto min-h-screen mt-20 text-white mb-20">
       <h1 className="md:text-5xl text-4xl font-bold mb-4 text-center mt-10">
         Prenota un appuntamento
       </h1>
@@ -117,13 +115,13 @@ export default function ClienteDashboard() {
 
       {modalOpen && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full text-black">
+          <div className="p-6 border text-white rounded shadow-lg max-w-md w-full">
             <h2 className="text-xl font-bold mb-4">
               Seleziona il servizio
             </h2>
 
             <select
-              className="w-full p-2 border rounded mb-4"
+              className="w-full p-2 border rounded mb-4 bg-gray-800 text-white"
               value={servizioSelezionato ?? ''}
               onChange={(e) => setServizioSelezionato(e.target.value)}
             >
@@ -187,21 +185,29 @@ export default function ClienteDashboard() {
         <label className="block mb-2 text-2xl mt-18">
           Seleziona una data:
         </label>
-        <DatePicker
-          selected={data}
-          onChange={(date: Date | null) => {
-            if (date instanceof Date) {
-              setData(date)
-            }
-          }}
-          dateFormat="dd/MM/yyyy"
-          className="p-2 border rounded border-gray-500 text-xl focus:outline-none"
-          minDate={new Date()}
-          filterDate={(date) => {
+        <Calendar
+          mode="single"
+          selected={data ?? undefined}
+          onSelect={(selected) => {
+              if (selected) setData(selected)
+            }}
+          required={false}
+          locale={it}
+          disabled={(date) => {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            const normalized = new Date(date)
+            normalized.setHours(0, 0, 0, 0)
+            const isPast = normalized < today
             const day = date.getDay()
-            return day !== 0 && day !== 1
+            const isWeekend = day === 0 || day === 1
+            return isPast || isWeekend
           }}
-          locale="it"
+          className='rounded-md border'
+          classNames={{
+            day: "rounded-full w-10 h-10 flex items-center justify-center text-sm",
+            caption_label: "text-xl"
+          }}
         />
       </div>
 

@@ -8,6 +8,9 @@ export async function POST(req: Request) {
     .insert({ nome, prezzo })
     .select()
     .single()
-  if (error) return Response.json({ error }, { status: 500 })
+  if (error) {
+  console.error('Errore Supabase:', error)
+  return Response.json({ error }, { status: 500 })
+}
   return Response.json(data)
 }
