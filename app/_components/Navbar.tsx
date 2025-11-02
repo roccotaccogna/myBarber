@@ -89,11 +89,11 @@ export default function Navbar({isLoggedIn, ruolo}: NavbarProps) {
           </Link>
           <div className="flex space-x-4">
             <Link href="/login">
-              Login
+              Accedi
             </Link>
             <p>|</p>
             <Link href="/signup">
-              Signup
+              Registrati
             </Link>
           </div>
           </>

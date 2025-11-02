@@ -1,17 +1,16 @@
 'use server';
 
 import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
 
-  export async function handleSignup(formData: FormData) {
+  export async function handleSignup(data: {
+  email: string
+  password: string
+  nome: string
+  cognome: string
+  telefono: string
+}) {
   const supabase = await createClient();
-
-    const email = formData.get('email') as string;
-    const password = formData.get('password') as string;
-    
-    const nome = formData.get('nome') as string;
-    const cognome = formData.get('cognome') as string;
-    const telefono = formData.get('telefono') as string;
+  const { email, password, nome, cognome, telefono } = data
 
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({  
     email,  
@@ -26,11 +25,10 @@ import { redirect } from "next/navigation";
   })
 
     if (signUpError || !signUpData.user) {
-      console.log('sign up error', signUpError);
-      redirect('/error');
+      return { success: false, message: signUpError?.message || 'Errore nella registrazione' }
     }
 
-  redirect('/');
+   return { success: true }
   }
 
 
